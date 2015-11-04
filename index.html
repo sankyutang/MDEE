@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh">
+    <head>
+      <meta charset="utf-8" />
+      <title>所有的markdown源文件</title>
+      <link rel="stylesheet" href="component/editor.md/examples/css/style.css" />
+      <link rel="stylesheet" href="component/editor.md/css/editormd.css" />
+      <link rel="stylesheet" href="component/bootstrap-3.3.5/css/bootstrap.css" />
+      <link rel="shortcut icon" href="https://pandao.github.io/editor.md/favicon.ico" type="image/x-icon" />
+    </head>
+    <body>
+    	<nav class="navbar navbar-default">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="index.html">MDEE</a>
+        </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+          <ul class="nav navbar-nav">
+            <li><a href="index.html">首页</a></li>
+          </ul>
+        </div>
+      </nav>
+      <p class="text-left">
+  			<button class="btn btn-primary" type="button" id="openMarkdown">打开Markdown文件目录</button>
+        <button class="btn btn-primary hidden" type="button" id="newMarkdown">新建Markdown</button>
+			</p>
+      <table class="table" id="mdList">
+      	<tr>
+      		<th>编号</th>
+      		<th>文件名</th>
+      	</tr>
+      </table>
+    	<!--<h2>所有的markdown源文件：</h2>-->
+		<div id="list">
+		</div>
+
+		<script src="component/editor.md/examples/js/jquery.min.js"></script>
+		<script src="component/jquery/jquery-1.11.3.js"></script>
+		<script src="component/bootstrap/js/bootstrap.js"></script>
+
+		<script>
+			var ipc = require('ipc');
+			var renderList = function(dirPath, _result){
+				for(var i = 0;i < _result.length;i++){
+					var tr = document.createElement('tr');
+					var item = _result[i];
+					var td = document.createElement("td");
+					var td1 = document.createElement('td');
+					var a = document.createElement('a');
+					a.textContent = item.name;
+					a.href = dirPath + '/writer.html?filePath=' + encodeURIComponent(item.fullPath) + "&filename=" + item.name;
+					td1.innerText = i + 1;
+					td.appendChild(a);
+					tr.appendChild(td1);
+					tr.appendChild(td);
+					document.querySelector('#mdList tbody').appendChild(tr);
+				}
+				
+			}
+		</script>
+    <script>
+    	// 初始化本地页和electron的交互通讯
+			var initIpc = function() {
+      
+				ipc.on('response', function(arg) {
+          console.log(arg);
+          if(!arg || !arg.action){
+            return;
+          }
+          switch(arg.action){
+            case 'openMarkdown':
+              if(arg.data){
+                renderList(arg.dirPath, arg.data);
+              }
+              if(arg.directoryPath){
+                localStorage.setItem('directoryPath', arg.directoryPath);
+              }
+              $("#newMarkdown").removeClass('hidden');
+              break;
+            default: break;
+          }
+				  
+				});
+				// ipc.send('request', {
+				// 	action: 'loadMarkdownList'
+				// });
+     	};
+
+     	// 初始化新建按钮事件
+     	var initNewMarkdown = function(){
+     		$("#newMarkdown").on('click', function(e){
+     			// console.log($(e));
+     			ipc.send('request', {
+     				action: 'newMarkdown',
+            directoryPath: localStorage.getItem('directoryPath')
+     			});
+     		})
+     	}
+
+      // 初始化打开目录按钮事件
+      var initOpenMarkdown = function(){
+        $("#openMarkdown").on('click', function(e){
+          ipc.send('request', {
+            action: 'openMarkdown'
+          })
+        });
+      }
+
+      // 初始化常用
+      var init = function(){
+
+        var directoryPath = localStorage.getItem('directoryPath');
+        console.log('directoryPath = ' + directoryPath);
+        if(directoryPath){
+          ipc.send('request',{
+            action: 'openMarkdownByPath',
+            directoryPath: directoryPath
+          });
+          $("#newMarkdown").removeClass('hidden');
+        }
+
+      }
+
+
+
+     	$(document).ready(function(){
+        init();
+     		initIpc();
+        initOpenMarkdown();
+     		initNewMarkdown();
+     	});
+
+    </script>
+    </body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta charset="utf-8" />
+        <title>Markdown by Electron and Editor.md</title>
+        <link rel="stylesheet" href="component/editor.md/examples/css/style.css" />
+        <link rel="stylesheet" href="component/editor.md/css/editormd.css" />
+        <link rel="stylesheet" href="component/bootstrap-3.3.5/css/bootstrap.css" />
+        <link rel="shortcut icon" href="https://pandao.github.io/editor.md/favicon.ico" type="image/x-icon" />
+    </head>
+    <body>
+        <div>
+            <!--
+            <header>
+                <h1>你正在编辑：</h1>
+            </header>
+            -->
+            <nav class="navbar navbar-default">
+                <div class="navbar-header">
+                  <a class="navbar-brand" href="index.html">MDEE</a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                  <ul class="nav navbar-nav">
+                    <li><a href="index.html">首页</a></li>
+                  </ul>
+                </div>
+              </nav>
+            <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-8">
+                    <div class="form-inline">
+                        <div class="form-group">
+                            <label for="filename">markdown文件名：</label>
+                            <input type="text" name="filename" id="filename" class="form-control" placeholder="" value="" />
+                            <input type="hidden" name="filename_sources" id="filename_sources" value="" />
+                            <button class="btn btn-default" type="submit" id="modifyFilename">修改</button>
+                            <p class="help-block">注意：修改后会重新加载markdown文件</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2"></div>
+            </div>
+            <form action="save.html" method="post">
+                <div class="editormd" id="editormd">                
+                    <textarea>### Hello world!</textarea>
+                </div>
+            </form>
+        </div>        
+        <script src="component/editor.md/examples/js/zepto.min.js"></script>
+        <!-- 
+        <script src="component/editor.md/examples/js/jquery.min.js"></script>
+        -->
+        <script src="component/editor.md/editormd.js"></script>   
+        <script src="component/common/util.js"></script>
+        <script type="text/javascript">
+			var testEditor;
+			// var jQuery = Zepto;  // 为了避免修改 flowChart.js 和 sequence-diagram.js 的源码，所以想支持 flowChart / sequenceDiagram 就得加上这一句
+
+            var ipc = require('ipc');
+            var logger = require('log4js').getLogger();
+
+            // 查找URL中需要加载的文件路径
+            var loadUrl = '', filename = '';
+            (function(){
+                // var search = location.search.substr(1,location.search.length);
+                // var searchArr = search.split('=');
+                // if(searchArr && searchArr.length == 2){
+                //     loadUrl = searchArr[1];
+                // }
+                // console.log(decodeURIComponent(loadUrl));
+                var searchQuery = parseQueryString();
+                loadUrl = decodeURIComponent(searchQuery.filePath);
+                filename = decodeURIComponent(searchQuery.filename);
+                filename = filename.substring(0,filename.lastIndexOf('.'));
+                if(filename){
+                    $("#filename").val(filename);
+                    $("#filename_sources").val(filename);
+                }
+            })();
+
+            var saveMarkdown = function(_this){
+                // logger.info("onchange =>", _this, _this.id, _this.settings, _this.state);
+                var markdown = _this.settings.markdown;
+                logger.info(_this.markdownTextarea[0].innerText);
+                ipc.send('request', {
+                    action: 'autoSaveMarkdown',
+                    editor: _this.markdownTextarea[0].innerText,
+                    loadUrl: loadUrl
+                });
+                ipc.on('response', function(arg) {
+                  // renderList(arg);
+                  logger.info(arg);
+
+                });
+            }
+
+            // console.log(document.URL);
+            var testEditor;
+            $(function() {
+                $.get(loadUrl, function(md){
+					testEditor = editormd("editormd", {
+						width  : "100%",
+						height : 720,
+						path   : 'component/editor.md/lib/',
+						markdown : md,
+                        codeFold : true,
+                        searchReplace : true,
+                        saveHTMLToTextarea : true,    // 保存 HTML 到 Textarea
+                        //watch : false,
+                        htmlDecode : "style,script,iframe|on*",            // 开启 HTML 标签解析，为了安全性，默认不开启
+                        emoji : true,
+                        taskList : true,
+                        tocm            : true,         // Using [TOCM]
+                        tex : true,                     // 开启科学公式 TeX 语言支持，默认关闭
+                        //previewCodeHighlight : false,  // 关闭预览窗口的代码高亮，默认开启
+                        flowChart : true,  
+                        sequenceDiagram : true,         // 同上
+						onload : function() {
+							console.log("onload =>", this, this.id, this.settings);
+						},
+                        onchange: function(){
+                            saveMarkdown(this);
+                        }
+					});
+				});
+                // testEditor = editormd("test-editormd", {
+                //     width   : "90%",
+                //     height  : 640,
+                //     syncScrolling : "single",
+                //     path    : "component/editor.md/lib/"
+                // });
+
+                $("#show-btn").bind('click', function(){
+                    testEditor.show();
+                });
+
+                $("#hide-btn").bind('click', function(){
+                    testEditor.hide();
+                });
+
+                $("#get-md-btn").bind('click', function(){
+                    alert(testEditor.getMarkdown());
+                });
+
+                $("#get-html-btn").bind('click', function() {
+                    alert(testEditor.getHTML());
+                });                
+
+                $("#watch-btn").bind('click', function() {
+                    testEditor.watch();
+                });                 
+
+                $("#unwatch-btn").bind('click', function() {
+                    testEditor.unwatch();
+                });              
+
+                $("#preview-btn").bind('click', function() {
+                    testEditor.previewing();
+                });
+
+                $("#fullscreen-btn").bind('click', function() {
+                    testEditor.fullscreen();
+                });
+                
+                $("#show-toolbar-btn").bind('click', function() {
+                    testEditor.showToolbar();
+                });
+                
+                $("#close-toolbar-btn").bind('click', function() {
+                    testEditor.hideToolbar();
+                });
+                
+                $("#toc-menu-btn").click(function(){
+                    testEditor.config({
+                        tocDropdown   : true,
+                        tocTitle      : "目录 Table of Contents",
+                    });
+                });
+                
+                $("#toc-default-btn").click(function() {
+                    testEditor.config("tocDropdown", false);
+                });
+
+                $("#modifyFilename").click(function(){
+                    var nameValue = $("#filename").val();
+                    logger.info('new filename = %s', nameValue);
+                    ipc.send('request', {
+                        action: 'saveFilename',
+                        value: nameValue,
+                        sourceValue: $("#filename_sources").val(),
+                        loadUrl: loadUrl,
+                        directoryPath: loadUrl.substring(0,loadUrl.lastIndexOf('/') + 1)
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>
